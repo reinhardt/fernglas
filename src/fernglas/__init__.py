@@ -12,12 +12,10 @@ SSH_OPTIONS = ['username', 'password', 'port', 'pkey']
 
 
 def main():
-    config_file = path.join(path.expanduser('~'), '.fernglas.cfg')
-    if not path.exists(config_file):
-        print("No server definitions found. ({0})".format(config_file))
-        exit(1)
+    user_config_file = path.join(path.expanduser('~'), '.fernglas.cfg')
+    project_config_file = path.join(getcwd(), '.fernglas.cfg')
     config = SafeConfigParser()
-    config.readfp(open(config_file))
+    config.read([user_config_file, project_config_file])
     servers = {}
     server_sections = config.get('main', 'servers').split(',')
     server_sections = [section.strip() for section in server_sections]
@@ -32,12 +30,10 @@ def main():
     package_name = package.get_name()
 
     repo = Repo(getcwd())
-    log = repo.head.log()
-    issue_commits = [entry.newhexsha for entry in log if issue in entry.message]
-    if not issue_commits:
+    latest_issue_commit = repo.git.log(grep=issue, n=1, format='%H')
+    if not latest_issue_commit:
         print("No commits found for " + issue)
         exit(1)
-    latest_issue_commit = issue_commits[-1]
 
     client = SSHClient()
     client.load_system_host_keys()
