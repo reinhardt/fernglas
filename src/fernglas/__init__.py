@@ -6,9 +6,15 @@ from os import getcwd
 from os import path
 from paramiko import AutoAddPolicy
 from paramiko.client import SSHClient
+from paramiko.config import SSHConfig
 from sys import exit
 
 SSH_OPTIONS = ['username', 'password', 'port', 'pkey']
+SSH_CONFIG_MAPPING = {
+    'user': 'username',
+    'identityfile': 'key_filename',
+    'hostname': 'hostname',
+}
 
 
 def main():
@@ -41,16 +47,29 @@ def main():
         print("No commits found for " + issue)
         exit(3)
 
+    config = SSHConfig()
+    ssh_config_path = path.expanduser('~/.ssh/config')
+    if path.exists(ssh_config_path):
+        try:
+            config.parse(open(ssh_config_path))
+        except Exception as e:
+            print("Could not parse ssh config: " + str(e))
+
     client = SSHClient()
     client.load_system_host_keys()
     # XXX support ecdsa?
     client.set_missing_host_key_policy(AutoAddPolicy())
 
     for key, server in servers.items():
-        connect_opts = dict(
+        host_config = config.lookup(server['hostname'])
+        connect_opts = {}
+        for key_ssh, key_paramiko in SSH_CONFIG_MAPPING.items():
+            if key_ssh in host_config:
+                connect_opts[key_paramiko] = host_config[key_ssh]
+        connect_opts.update(dict(
             (opt, servers[key][opt]) for opt in SSH_OPTIONS
-            if opt in servers[key])
-        client.connect(server['name'], **connect_opts)
+            if opt in servers[key]))
+        client.connect(**connect_opts)
         stdin, stdout, stderr = client.exec_command('grep {0} {1}'.format(
             package_name, server['versions-path']))
         deployed_version = stdout.read().strip().replace(package_name, '')\
