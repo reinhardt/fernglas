@@ -36,7 +36,7 @@ def main():
     package_name = package.get_name()
 
     repo = Repo(getcwd())
-    latest_issue_commit = repo.git.log(grep=issue, n=1, format='%H')
+    latest_issue_commit = repo.git.log(all=True, grep=issue, n=1, format='%H')
     if not latest_issue_commit:
         print("No commits found for " + issue)
         exit(3)
