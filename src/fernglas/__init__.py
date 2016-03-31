@@ -17,6 +17,12 @@ def main():
     config = SafeConfigParser()
     config.read([user_config_file, project_config_file])
     servers = {}
+    if not config.has_section('main'):
+        print("No main config found")
+        exit(1)
+    if not config.has_option('main', 'servers'):
+        print("No servers defined")
+        exit(2)
     server_sections = config.get('main', 'servers').split(',')
     server_sections = [section.strip() for section in server_sections]
     for server in server_sections:
@@ -33,7 +39,7 @@ def main():
     latest_issue_commit = repo.git.log(grep=issue, n=1, format='%H')
     if not latest_issue_commit:
         print("No commits found for " + issue)
-        exit(1)
+        exit(3)
 
     client = SSHClient()
     client.load_system_host_keys()
